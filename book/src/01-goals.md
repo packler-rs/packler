@@ -41,10 +41,15 @@ Kadlov (aka matklad)'s description][1].
 
 Pickler provides the features but by design the user must assemble them.
 
-## Basic Principles
+## Inspiration
 
+Pickler draws inspiration from many different projets and sometimes directly
+imports code from them:
 
-
+- [Trunk][https://trunkrs.dev/], an external packer more focused on SPAs
+- [xtask-wasm][https://github.com/rustminded/xtask-wasm/], a direct inspiration
+- [Webpack][https://webpack.js.org/], the well known bundler from the JS world
+- [Sprocket][https://github.com/rails/sprockets], the rails packaging system
 
 
 [grass]: https://github.com/connorskees/grass
