@@ -1,19 +1,47 @@
 # Packler, bundle Rust for the web
 
-Packler is not implemented. We focus on the design by writing the documentation
-first. See the [book](./book/).
+> **Warning**
+> This is not ready yet. 
+
+
+## Usage
+
+A basic xtask main file using Packler:
+
+```rust
+use packler::{PacklerConfig, PacklerParams, Run};
+
+#[tokio::main]
+async fn main() {
+    dotenv::from_filename(".env.deploy").ok();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
+    let run = Run::new(
+        PacklerParams::new(
+            ["app.scss", "admin.scss"],
+            [""; 0], // No WASM frontend
+            Some("server"),
+            Some("prod-pikz-assets"),
+        ),
+        PacklerConfig::default(),
+    );
+
+    run.start().await;
+}
+```
+
 
 ## Book
 
 Run the devserver with `$ mdbook serve book/ --open`.
 
-
 ## Other
 
-- [cargo-leptos][1], the cargo tools for leptos.
-- [trunk][2], a tool to build/bundle/ship wasm apps
+
+- [cargo-leptos][leptos], the cargo tools for leptos.
+- [trunk][trunk], a tool to build/bundle/ship wasm apps
 - [rspack][rspack], a frontend toolchain by Bytedance
 
-[1]: https://github.com/leptos-rs/cargo-leptos
-[2]: https://github.com/thedodd/trunk
-[3]: https://github.com/web-infra-dev/rspack
+[leptos]: https://github.com/leptos-rs/cargo-leptos
+[trunk]: https://github.com/thedodd/trunk
+[rspack]: https://github.com/web-infra-dev/rspack
