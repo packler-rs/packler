@@ -1,5 +1,6 @@
 [package]
 name = "packler"
+description = "Bundle Rust webapps with xtask"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
