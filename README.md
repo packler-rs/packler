@@ -11,8 +11,7 @@ A basic xtask main file using Packler:
 ```rust
 use packler::{PacklerConfig, PacklerParams, Run};
 
-#[tokio::main]
-async fn main() {
+fn main() {
     dotenv::from_filename(".env.deploy").ok();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
@@ -26,7 +25,7 @@ async fn main() {
         PacklerConfig::default(),
     );
 
-    run.start().await;
+    run.start();
 }
 ```
 
@@ -36,7 +35,6 @@ async fn main() {
 Run the devserver with `$ mdbook serve book/ --open`.
 
 ## Other
-
 
 - [cargo-leptos][leptos], the cargo tools for leptos.
 - [trunk][trunk], a tool to build/bundle/ship wasm apps

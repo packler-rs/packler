@@ -281,10 +281,6 @@ impl Run {
         let components = if raw_components.is_empty() {
             buildable_components
         } else {
-            // FIXME: this might be improved for finer control in case of
-            // invalid component name. Do we want to stop the whole execution
-            // or try to gobe the error, display a warning and continue the
-            // execution with the valid part?
             raw_components
                 .iter()
                 .filter_map(|name| Component::new(name).ok())
@@ -299,20 +295,21 @@ impl Run {
         }
     }
 
-    pub async fn start(&self) {
-        // There are implicit dependencies between actions, for example to
-        // deploy, we must build first.
-        //
-        // Is there also implicit deps between components? Something like 'you
-        // must first build the assets before the frontend' ?
-        //
-        // Steps could be optimized later (eg. by fingerprinting the build
-        // maybe?) Clean can be a simple delete of all the working dirs for the
-        // component
-        //
-        // In any case, it might be useful to lay out the plan of execution to
-        // the user (FIXME?)
-        //
+    /// Starth the Run. This will spawn an async runtime so the user does not
+    /// need to provide it.
+    pub fn start(&self) {
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                println!("Hello world");
+                self.start_async().await;
+            });
+    }
+
+    /// Start the Run when you are already in an async context.
+    async fn start_async(&self) {
         match &self.action {
             Action::Build(opts) => {
                 for component in &self.components {
