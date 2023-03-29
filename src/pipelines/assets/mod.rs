@@ -1,10 +1,10 @@
-use crate::{pipelines::assets::bucket::send_cors, PacklerConfig, PacklerParams};
-use aws_sdk_s3::{model::ObjectCannedAcl, types::ByteStream};
-use log::{debug, error, info, warn};
+use crate::{
+    pipelines::assets::bucket::{AssetBucket, AssetsBucketConfig},
+    PacklerConfig, PacklerParams,
+};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Write, path::PathBuf};
-
-use self::bucket::init_s3_client;
 
 pub mod bucket;
 pub mod images;
@@ -18,16 +18,21 @@ pub async fn deploy_assets(params: &PacklerParams, cfg: &PacklerConfig) {
     };
 
     info!("uploading assets");
-    upload_assets(params, cfg, &metadata).await;
+
+    let bucket_cfg = AssetsBucketConfig {
+        allowed_origins: vec!["http://blop.com".to_string()], // FIXME: This should be a param.
+        bucket_region: "fr-par".to_owned(),
+        bucket_endpoint_url: "https://s3.fr-par.scw.cloud".to_owned(),
+    };
+
+    let bucket = AssetBucket::new(bucket_cfg, params).await;
+    bucket.send_assets(&cfg, &metadata).await;
 
     info!("writing metadata file");
     write_metadata_file(cfg, &metadata);
 
-    if let Some(bucket) = &params.static_bucket_name {
-        info!("Setting CORS config on bucket: '{bucket}'");
-        let client = bucket::init_s3_client().await;
-        send_cors(&client, bucket).await;
-    }
+    info!("setting CORS config on assets bucket");
+    bucket.send_cors().await;
 }
 
 pub fn write_metadata_file(config: &PacklerConfig, metadata: &AssetsOutput) {
@@ -45,60 +50,6 @@ pub fn write_metadata_file(config: &PacklerConfig, metadata: &AssetsOutput) {
         .and_then(|mut f| f.write_all(content.as_bytes()))
         .map_err(Error::CannotWriteMetadataFile)
         .unwrap()
-}
-
-/// Uploads all the assets listed in `metadata`.
-///
-/// Beware that this is an additive process, we will upload the assets _without_
-/// removing the old ones. You can (and should) remove the old ones in a
-/// different step.
-///
-/// It is designed this way so you can serve multiple version of the assets at
-/// the same time (e.g., you have a rollout deploy and different versions of the
-/// app might be running at the same time).
-///
-pub async fn upload_assets(params: &PacklerParams, cfg: &PacklerConfig, metadata: &AssetsOutput) {
-    let Some(bucket_name) = &params.static_bucket_name else {
-        error!("There are no specified bucket in which we want to deploy");
-        return
-    };
-
-    let client = init_s3_client().await;
-
-    for item in metadata.iter() {
-        // FIXME: improvement: do not re-upload a file if it's already there.
-        // we have a checksum in the filename so that shouldn't be a problem.
-        let src = cfg.dist_dir.join(&item.processed_relative_path);
-        let object_name = item.processed_relative_path.to_string_lossy();
-        let mime_type = mime_guess::from_path(&src)
-            .first_raw()
-            .expect("could not get content type");
-
-        debug!(
-            "Uploading '{}' to: '{}' (content-type: '{}'))",
-            src.display(),
-            object_name,
-            mime_type
-        );
-
-        let stream = ByteStream::from_path(&src)
-            .await
-            .expect("Could not open file to upload");
-
-        let upload = client
-            .put_object()
-            .key(object_name)
-            .bucket(bucket_name)
-            .acl(ObjectCannedAcl::PublicRead)
-            .content_type(mime_type)
-            .body(stream)
-            .send();
-
-        match upload.await {
-            Ok(_resp) => debug!("Asset Uploaded"),
-            Err(err) => warn!("Could not upload {}: {err:?}", src.display()),
-        }
-    }
 }
 
 pub fn clean_assets(cfg: &PacklerConfig) {

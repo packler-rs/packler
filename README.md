@@ -29,7 +29,6 @@ fn main() {
 }
 ```
 
-
 ## Book
 
 Run the devserver with `$ mdbook serve book/ --open`.

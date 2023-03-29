@@ -1,43 +1,125 @@
+use super::AssetsOutput;
+use crate::{PacklerConfig, PacklerParams};
+use aws_config::SdkConfig;
 use aws_sdk_s3::{
-    model::{CorsConfiguration, CorsRule},
+    model::{CorsConfiguration, CorsRule, ObjectCannedAcl},
+    types::ByteStream,
     Client, Region,
 };
+use log::{debug, warn};
 
-pub async fn send_cors(client: &Client, bucket_name: &str) {
-    let cors_configuration = CorsConfiguration::builder()
-        .cors_rules(
-            CorsRule::builder()
-                // .allowed_origins("http://localhost:8080")
-                // .allowed_origins("*"")
-                .allowed_origins("http://brol.com")
-                .allowed_headers("*")
-                .allowed_methods("GET")
-                .allowed_methods("HEAD")
-                .expose_headers("Etag")
-                .max_age_seconds(30000)
-                .build(),
-        )
-        .build();
+pub struct AssetsBucketConfig {
+    pub allowed_origins: Vec<String>, // FIXME: This should be a param.
 
-    let response = client
-        .put_bucket_cors()
-        .bucket(bucket_name)
-        .cors_configuration(cors_configuration)
-        .send()
-        .await;
+    // Eg., "fr-par"
+    pub bucket_region: String,
 
-    dbg!(&response);
+    // Eg., "https://s3.fr-par.scw.cloud"
+    pub bucket_endpoint_url: String,
 }
 
-pub async fn init_s3_client() -> Client {
-    let shared_config = aws_config::load_from_env().await;
-    let scw_url = "https://s3.fr-par.scw.cloud";
-    let scw_region = Region::from_static("fr-par");
+pub struct AssetBucket {
+    client: Client,
+    bucket_name: String,
+    cors_config: CorsConfiguration,
+}
 
-    let s3_config = aws_sdk_s3::config::Builder::from(&shared_config)
-        .region(scw_region)
-        .endpoint_url(scw_url)
-        .build();
+impl AssetBucket {
+    /// This will fetch the credentials from the environment.
+    pub async fn new(config: AssetsBucketConfig, params: &PacklerParams) -> Self {
+        let aws_config = aws_config::load_from_env().await;
+        Self::with_aws_config(&aws_config, config, params)
+    }
 
-    aws_sdk_s3::Client::from_conf(s3_config)
+    pub fn with_aws_config(
+        aws_config: &SdkConfig,
+        config: AssetsBucketConfig,
+        params: &PacklerParams,
+    ) -> Self {
+        let s3_config = aws_sdk_s3::config::Builder::from(aws_config)
+            .region(Region::new(config.bucket_region.clone()))
+            .endpoint_url(&config.bucket_endpoint_url)
+            .build();
+        Self {
+            client: aws_sdk_s3::Client::from_conf(s3_config),
+            bucket_name: params
+                .static_bucket_name
+                .clone()
+                .expect("Bucket name for assets deploy was not provided"),
+            cors_config: CorsConfiguration::builder()
+                .cors_rules(
+                    CorsRule::builder()
+                        .set_allowed_origins(Some(config.allowed_origins))
+                        .allowed_headers("*")
+                        .allowed_methods("GET")
+                        .allowed_methods("HEAD")
+                        .expose_headers("Etag")
+                        .max_age_seconds(360)
+                        .build(),
+                )
+                .build(),
+        }
+    }
+
+    pub async fn send_cors(&self) {
+        let res = self
+            .client
+            .put_bucket_cors()
+            .bucket(&self.bucket_name)
+            .cors_configuration(self.cors_config.clone())
+            .send()
+            .await;
+
+        match res {
+            Ok(_) => {}
+            Err(e) => warn!("could not set CORS: {e}"),
+        }
+    }
+
+    /// Uploads all the assets listed in `metadata`.
+    ///
+    /// Beware that this is an additive process, we will upload the assets _without_
+    /// removing the old ones. You can (and should) remove the old ones in a
+    /// different step.
+    ///
+    /// It is designed this way so you can serve multiple version of the assets at
+    /// the same time (e.g., you have a rollout deploy and different versions of the
+    /// app might be running at the same time).
+    ///
+    pub async fn send_assets(&self, cfg: &PacklerConfig, metadata: &AssetsOutput) {
+        for item in metadata.iter() {
+            // We always reupload everything.
+            let src = cfg.dist_dir.join(&item.processed_relative_path);
+            let object_name = item.processed_relative_path.to_string_lossy();
+            let mime_type = mime_guess::from_path(&src)
+                .first_raw()
+                .expect("could not get content type");
+
+            debug!(
+                "Uploading '{}' to: '{}' (content-type: '{}'))",
+                src.display(),
+                object_name,
+                mime_type
+            );
+
+            let stream = ByteStream::from_path(&src)
+                .await
+                .expect("Could not open file to upload");
+
+            let upload = self
+                .client
+                .put_object()
+                .key(object_name)
+                .bucket(&self.bucket_name)
+                .acl(ObjectCannedAcl::PublicRead)
+                .content_type(mime_type)
+                .body(stream)
+                .send();
+
+            match upload.await {
+                Ok(_resp) => debug!("Asset Uploaded"),
+                Err(err) => warn!("Could not upload {}: {err:?}", src.display()),
+            }
+        }
+    }
 }
