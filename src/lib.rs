@@ -102,7 +102,6 @@ pub fn path_to_watch(
     }
 }
 
-#[derive(Debug)]
 pub struct Run {
     pub params: PacklerParams,
     pub config: PacklerConfig,

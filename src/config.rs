@@ -1,5 +1,7 @@
 use std::{path::PathBuf, str::FromStr};
 
+use crate::pipelines::assets::bucket::AssetsBucketParams;
+
 pub const DEFAULT_SASS_VERSION: &str = "1.59.3";
 pub const DEFAULT_OUTPUT_DIR: &str = "dist";
 pub const DEFAULT_ASSETS_DIR: &str = "assets";
@@ -7,7 +9,6 @@ pub const DEFAULT_IMAGES_DIR: &str = "images";
 pub const DEFAULT_SASS_DIR: &str = "css";
 pub const DEFAULT_METADATA_FILENAME: &str = "assets.json";
 
-#[derive(Debug)]
 pub struct PacklerParams {
     /// The SASS entry points. They will be compiled to CSS.
     pub sass_entrypoints: Vec<PathBuf>,
@@ -18,9 +19,8 @@ pub struct PacklerParams {
     /// The names of the frontend crates.
     pub frontend_crates: Vec<String>,
 
-    /// The name of the bucket in which the assets and compiled frontends
-    /// will be uploaded.
-    pub static_bucket_name: Option<String>,
+    /// Optional
+    pub bucket_asset: Option<AssetsBucketParams>,
 }
 
 impl PacklerParams {
@@ -31,8 +31,8 @@ impl PacklerParams {
         static_bucket_name: Option<S>,
     ) -> Self
     where
-        P: Into<PathBuf> + Send + Clone,
-        S: Into<String> + Send + Clone,
+        P: Into<PathBuf>,
+        S: Into<String>,
         E: IntoIterator<Item = P>,
         C: IntoIterator<Item = S>,
     {
@@ -40,14 +40,14 @@ impl PacklerParams {
             sass_entrypoints: sass_entrypoints.into_iter().map(Into::into).collect(),
             backend_crate: backend_crate.map(Into::into),
             frontend_crates: frontend_crates.into_iter().map(Into::into).collect(),
-            static_bucket_name: static_bucket_name.map(Into::into),
+            bucket_asset: , //static_bucket_name.map(Into::into),
         }
     }
 }
 
 /// The configuration is editable by the user but Packler aims to provide
 /// sensible defaults.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PacklerConfig {
     /// Directory where are located the assets we want to process (images,
     /// css/sass).

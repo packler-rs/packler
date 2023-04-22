@@ -1,7 +1,4 @@
-use crate::{
-    pipelines::assets::bucket::{AssetBucket, AssetsBucketConfig},
-    PacklerConfig, PacklerParams,
-};
+use crate::{pipelines::assets::bucket::AssetBucket, PacklerConfig, PacklerParams};
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Write, path::PathBuf};
@@ -19,13 +16,18 @@ pub async fn deploy_assets(params: &PacklerParams, cfg: &PacklerConfig) {
 
     info!("uploading assets");
 
-    let bucket_cfg = AssetsBucketConfig {
-        allowed_origins: vec!["http://blop.com".to_string()], // FIXME: This should be a param.
-        bucket_region: "fr-par".to_owned(),
-        bucket_endpoint_url: "https://s3.fr-par.scw.cloud".to_owned(),
+    // Do not hardcode this.
+    // let bucket_cfg = AssetsBucketConfig {
+    //     allowed_origins: vec!["http://blop.com".to_string()], // FIXME: This should be a param.
+    //     bucket_region: "fr-par".to_owned(),
+    //     bucket_endpoint_url: "https://s3.fr-par.scw.cloud".to_owned(),
+    // };
+    let Some(bucket_params) = &params.bucket_asset else {
+        error!("Cannot deploy assets: bucket parameters were not provided");
+        return;
     };
 
-    let bucket = AssetBucket::new(bucket_cfg, params).await;
+    let bucket = AssetBucket::new(bucket_params).await;
     bucket.send_assets(&cfg, &metadata).await;
 
     info!("writing metadata file");

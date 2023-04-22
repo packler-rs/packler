@@ -1,5 +1,5 @@
 use super::AssetsOutput;
-use crate::{PacklerConfig, PacklerParams};
+use crate::PacklerConfig;
 use aws_config::SdkConfig;
 use aws_sdk_s3::{
     model::{CorsConfiguration, CorsRule, ObjectCannedAcl},
@@ -8,13 +8,17 @@ use aws_sdk_s3::{
 };
 use log::{debug, warn};
 
-pub struct AssetsBucketConfig {
-    pub allowed_origins: Vec<String>, // FIXME: This should be a param.
+#[derive(Debug)]
+pub struct AssetsBucketParams {
+    pub bucket_name: String,
 
-    // Eg., "fr-par"
+    /// Allowed origin will be use to set the CORS rules
+    pub allowed_origins: Vec<String>,
+
+    /// Eg., "fr-par"
     pub bucket_region: String,
 
-    // Eg., "https://s3.fr-par.scw.cloud"
+    /// Eg., "https://s3.fr-par.scw.cloud"
     pub bucket_endpoint_url: String,
 }
 
@@ -26,30 +30,23 @@ pub struct AssetBucket {
 
 impl AssetBucket {
     /// This will fetch the credentials from the environment.
-    pub async fn new(config: AssetsBucketConfig, params: &PacklerParams) -> Self {
+    pub async fn new(config: &AssetsBucketParams) -> Self {
         let aws_config = aws_config::load_from_env().await;
-        Self::with_aws_config(&aws_config, config, params)
+        Self::with_aws_config(&aws_config, &config)
     }
 
-    pub fn with_aws_config(
-        aws_config: &SdkConfig,
-        config: AssetsBucketConfig,
-        params: &PacklerParams,
-    ) -> Self {
+    pub fn with_aws_config(aws_config: &SdkConfig, config: &AssetsBucketParams) -> Self {
         let s3_config = aws_sdk_s3::config::Builder::from(aws_config)
             .region(Region::new(config.bucket_region.clone()))
             .endpoint_url(&config.bucket_endpoint_url)
             .build();
         Self {
             client: aws_sdk_s3::Client::from_conf(s3_config),
-            bucket_name: params
-                .static_bucket_name
-                .clone()
-                .expect("Bucket name for assets deploy was not provided"),
+            bucket_name: config.bucket_name.clone(),
             cors_config: CorsConfiguration::builder()
                 .cors_rules(
                     CorsRule::builder()
-                        .set_allowed_origins(Some(config.allowed_origins))
+                        .set_allowed_origins(Some(config.allowed_origins.clone()))
                         .allowed_headers("*")
                         .allowed_methods("GET")
                         .allowed_methods("HEAD")
