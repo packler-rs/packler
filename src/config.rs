@@ -19,8 +19,9 @@ pub struct PacklerParams {
     /// The names of the frontend crates.
     pub frontend_crates: Vec<String>,
 
-    /// Optional
-    pub bucket_asset: Option<AssetsBucketParams>,
+    /// Optional. Only needed to deploy the compiled assets (CSS, images) to an
+    /// (S3 compatible) object storage.
+    pub assets_bucket: Option<AssetsBucketParams>,
 }
 
 impl PacklerParams {
@@ -28,7 +29,7 @@ impl PacklerParams {
         sass_entrypoints: E,
         frontend_crates: C,
         backend_crate: Option<S>,
-        static_bucket_name: Option<S>,
+        assets_bucket: Option<AssetsBucketParams>,
     ) -> Self
     where
         P: Into<PathBuf>,
@@ -40,7 +41,7 @@ impl PacklerParams {
             sass_entrypoints: sass_entrypoints.into_iter().map(Into::into).collect(),
             backend_crate: backend_crate.map(Into::into),
             frontend_crates: frontend_crates.into_iter().map(Into::into).collect(),
-            bucket_asset: , //static_bucket_name.map(Into::into),
+            assets_bucket,
         }
     }
 }

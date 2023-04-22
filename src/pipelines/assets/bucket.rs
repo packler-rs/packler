@@ -12,14 +12,14 @@ use log::{debug, warn};
 pub struct AssetsBucketParams {
     pub bucket_name: String,
 
-    /// Allowed origin will be use to set the CORS rules
-    pub allowed_origins: Vec<String>,
-
     /// Eg., "fr-par"
     pub bucket_region: String,
 
     /// Eg., "https://s3.fr-par.scw.cloud"
     pub bucket_endpoint_url: String,
+
+    /// Allowed origin will be use to set the CORS rules
+    pub allowed_origins: Vec<String>,
 }
 
 pub struct AssetBucket {

@@ -15,14 +15,7 @@ pub async fn deploy_assets(params: &PacklerParams, cfg: &PacklerConfig) {
     };
 
     info!("uploading assets");
-
-    // Do not hardcode this.
-    // let bucket_cfg = AssetsBucketConfig {
-    //     allowed_origins: vec!["http://blop.com".to_string()], // FIXME: This should be a param.
-    //     bucket_region: "fr-par".to_owned(),
-    //     bucket_endpoint_url: "https://s3.fr-par.scw.cloud".to_owned(),
-    // };
-    let Some(bucket_params) = &params.bucket_asset else {
+    let Some(bucket_params) = &params.assets_bucket else {
         error!("Cannot deploy assets: bucket parameters were not provided");
         return;
     };
