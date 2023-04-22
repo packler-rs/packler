@@ -2,9 +2,10 @@ use super::AssetsOutput;
 use crate::PacklerConfig;
 use aws_config::SdkConfig;
 use aws_sdk_s3::{
-    model::{CorsConfiguration, CorsRule, ObjectCannedAcl},
-    types::ByteStream,
-    Client, Region,
+    config::Region,
+    primitives::ByteStream,
+    types::{CorsConfiguration, CorsRule, ObjectCannedAcl},
+    Client,
 };
 use log::{debug, warn};
 
