@@ -2,7 +2,6 @@ use crate::{
     cli::build_parser,
     pipelines::assets::{build_assets, deploy_assets},
 };
-use clap::{Args, Parser};
 pub use config::{PacklerConfig, PacklerParams};
 use lazy_static::lazy_static;
 use log::{debug, info, trace};
@@ -48,12 +47,12 @@ impl Display for Error {
     }
 }
 
-#[derive(Args, Debug)]
+#[derive(Debug)]
 pub struct BuildOpts {
     pub watch: bool,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Debug)]
 pub enum Action {
     Build(BuildOpts),
     Clean,
@@ -169,7 +168,6 @@ impl Run {
             .build()
             .unwrap()
             .block_on(async {
-                println!("Hello world");
                 self.start_async().await;
             });
     }

@@ -26,7 +26,7 @@ reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"
 cargo_metadata = "0.15"
 lazy_static = "1.4.0"
 walkdir = "2"
-clap = { version = "4", default-features = false, features = ["std", "help", "derive", "cargo"] }
+clap = { version = "4", default-features = false, features = ["std", "help", "cargo"] }
 mime_guess = "2"
 notify = "5.1"
 
