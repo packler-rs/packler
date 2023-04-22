@@ -9,7 +9,7 @@
 A basic xtask main file using Packler:
 
 ```rust
-use packler::{PacklerConfig, PacklerParams, Run};
+use packler::{pipelines::assets::bucket::AssetsBucketParams, PacklerConfig, PacklerParams, Run};
 
 fn main() {
     dotenv::from_filename(".env.deploy").ok();
@@ -20,7 +20,12 @@ fn main() {
             ["app.scss", "admin.scss"],
             [""; 0], // No WASM frontend
             Some("server"),
-            Some("prod-pikz-assets"),
+            Some(AssetsBucketParams {
+                bucket_name: "bucket-with-assets".to_owned(),
+                bucket_region: "fr-par".to_owned(),
+                bucket_endpoint_url: "https://s3.fr-par.scw.cloud".to_owned(),
+                allowed_origins: vec!["http://example.com".to_string()],
+            }),
         ),
         PacklerConfig::default(),
     );
